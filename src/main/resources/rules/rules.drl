@@ -1,0 +1,396 @@
+//created on: 2020-12-02
+package car_rent
+import java.text.SimpleDateFormat;
+
+rule "Booking car phase 0 - no conflict"
+salience 1		
+    when
+      b : Booking(phase==0)
+    then	
+    	b.text+="=====================Analiza rezerwacji===================\n";
+		b.text+="Potwierdzono, że klient "+b.client.name+" nie rezerwuje innego samochodu w tym samym czasie.\n";
+		b.phase=1;
+		update(b);
+		
+end
+
+	rule "Booking car phase 0 - conflict"
+	salience 2		
+	    when
+	      b : Booking(phase==0)
+	      conflict : Booking(client==b.client, phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+	    then	
+	        System.out.println("=====================Analiza rezerwacji===================");
+			System.out.println("Klient "+b.client.name+"posiada inną rezerwację na kolidujący okres. Rezerwacja odrzucona.");
+			System.out.println("==========================================================");
+			retract(b);
+			
+	end
+	
+	
+	rule "Booking without chosen type - phase 1"
+	
+	    when
+	      b : Booking(cartype == CarType.any, phase==1)
+	    then
+	    	b.text+="Poszukiwanie dostępnego samochodu typu A.\n";
+			b.cartype= CarType.A;
+			b.CarID="A1";
+			b.phase=2;
+			update(b);
+	end
+	
+	rule "Booking car A - phase 1"
+	
+	    when
+	      b : Booking(cartype == CarType.A, phase==1)
+	    then
+			b.text+="Poszukiwanie dostępnego samochodu typu A.\n";
+			b.CarID="A1";
+			b.phase=2;
+			update(b);
+	end
+	
+		rule "Booking car A - phase 2.1 - conflict"
+		salience 2		
+		    when
+		      b : Booking(cartype == CarType.A,CarID=="A1", phase==2)
+		      conflict : Booking(CarID=="A1", phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+		    then	
+				b.text+="Samochód A1 jest niedostępny.\n"	;
+				b.CarID="A2";
+				update(b);
+				
+		end
+		
+		rule "Booking car A - phase 2.1 - no conflict"
+		salience 1	
+		    when
+		      b : Booking(cartype == CarType.A,CarID=="A1", phase==2)
+		    then	
+				b.text+="Zaoferowano samochód A1.\n";
+				b.phase=3;
+				update(b);
+				
+		end
+		
+		rule "Booking car A - phase 2.2 - conflict"
+		salience 2
+		    when
+		      b : Booking(CarID=="A2", phase==2)
+		      conflict : Booking(cartype == CarType.A,CarID=="A2", phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+		    then	
+				b.text+="Samochód A2 jest niedostępny.\n";
+				b.text+="Poszukiwanie dostępnego samochodu typu B.\n";
+				b.phase=2;
+				b.CarID="B1";
+				update(b);
+				
+		end
+		
+		rule "Booking car A - phase 2.2 - no conflict"
+		salience 1	
+		    when
+		      b : Booking(cartype == CarType.A,CarID=="A2", phase==2)
+		    then	
+				b.text+="Zaoferowano samochód A2.\n";
+				b.phase=3;
+				update(b);
+				
+		end
+	
+	rule "Booking car B - phase 1"
+	
+	    when
+	      b : Booking(cartype == CarType.B, phase==1)
+	    then
+		 b.text+="Poszukiwanie dostępnego samochodu typu B.\n";
+		 b.CarID="B1";
+	     b.phase=2;
+		 update(b);
+	end
+	
+		rule "Booking car B - phase 2 - conflict"
+		salience 2		
+		    when
+		      b : Booking(CarID=="B1", phase==2)
+		      conflict : Booking(CarID=="B1", phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+		    then	
+				b.text+="Samochód B1 jest niedostępny.\n";
+				b.text+="Poszukiwanie dostępnego samochodu typu D.\n";
+				b.CarID="D1";
+				b.phase=2;
+				update(b);
+				
+		end
+		
+		rule "Booking car B - phase 2 - no conflict"
+		salience 1	
+		    when
+		      b : Booking(CarID=="B1", phase==2)
+		    then	
+				b.text+="Zaoferowano samochód B1.\n";
+				b.phase=3;
+				update(b);
+				
+		end
+	
+	rule "Booking car D - phase 1"
+	
+	    when
+	      b : Booking(cartype == CarType.D, phase==1)
+	    then
+		 b.text+="Poszukiwanie dostępnego samochodu typu D.\n";
+		 b.CarID="D1";
+	     b.phase=2;
+		 update(b);
+		 
+	end
+	
+		rule "Booking car D - phase 2.1 - conflict"
+		salience 2		
+		    when
+		      b : Booking(CarID=="D1", phase==2)
+		      conflict : Booking(CarID=="D1", phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+		    then	
+				b.text+="Samochód D1 jest niedostępny.\n";
+				b.CarID="D2";
+				update(b);
+				
+		end
+		
+		rule "Booking car D - phase 2.1 - no conflict"
+		salience 1	
+		    when
+		      b : Booking(CarID=="D1", phase==2)
+		    then	
+				b.text+="Zaoferowano samochód D1.\n";
+				b.phase=3;	
+				update(b);
+				
+		end
+		
+		rule "Booking car D - phase 2.2 - conflict"
+		salience 2
+		    when
+		      b : Booking(CarID=="D2", phase==2)
+		      conflict : Booking(CarID=="D2", phase==-1, ((b.Start.before(Start)&&b.End.after(Start))||(b.Start.before(End)&&b.End.after(End)))||b.Start.equals(End)||b.Start.equals(Start)||b.End.equals(Start)||b.End.equals(End) )
+		    then	
+				b.text+="Samochód D2 jest niedostępny.\n";
+				b.text+="Nie można zaoferować żadnego samochodu spełniającego wymagania. Rezerwacja odrzucona.\n";
+				b.text+="==========================================================\n";	
+				System.out.print(b.text);			
+				retract(b);
+				
+		end
+		
+		rule "Booking car D - phase 2.2 - no conflict"
+		salience 1	
+		    when
+		      b : Booking(CarID=="D2", phase==2)
+		    then	
+				b.text+="Zaoferowano samochód D2.\n";
+				b.phase=3;
+				update(b);
+				
+		end	
+	//payments
+		rule "Booking - payment phase 3 - long term(type A)"
+		salience 2
+			when
+				b : Booking(phase==3, b.getlength()>3/*change this to change type A long term days limit*/, cartype==CarType.A)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================\n";
+				long LongTermPriceA = 59;/*change this to modify long term car A prices*/
+				b.SetValue(b.getlength()*LongTermPriceA);
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+LongTermPriceA+"="+b.GetValue()+"\n";	
+				b.phase = 4;
+				update(b);
+		end
+		rule "Booking - payment phase 3 - short term(type A)"
+		salience 1
+			when
+				b : Booking(phase==3, cartype==CarType.A)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================\n";
+				long ShortTermPriceA = 69;/*change this to modify short term car A prices*/
+				b.SetValue(b.getlength()*ShortTermPriceA);	
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+ShortTermPriceA+"="+b.GetValue()+"\n";
+				b.phase = 4;
+				update(b);
+		end
+		rule "Booking - payment phase 3 - long term(type B)"
+		salience 2
+			when
+				b : Booking(phase==3, b.getlength()>3, cartype==CarType.B)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================\n";
+				long LongTermPriceB = 69;/*change this to modify long term car B prices*/
+				b.SetValue(b.getlength()*LongTermPriceB);
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+LongTermPriceB+"="+b.GetValue()+"\n";		
+				b.phase = 4;
+				update(b);
+		end
+		rule "Booking - payment phase 3 - short term(type B)"
+		salience 1
+			when
+				b : Booking(phase==3, cartype==CarType.B)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================";
+				long ShortTermPriceB = 79;/*change this to modify short term car B prices*/
+				b.SetValue(b.getlength()*ShortTermPriceB);	
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+ShortTermPriceB+"="+b.GetValue()+"\n";	
+				b.phase = 4;
+				update(b);
+		end
+		rule "Booking - payment phase 3 - long term(type D)"
+		salience 2
+			when
+				b : Booking(phase==3, b.getlength()>3, cartype==CarType.D)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================\n";
+				long LongTermPriceD = 79;/*change this to modify long term car D prices*/
+				b.SetValue(b.getlength()*LongTermPriceD);
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+LongTermPriceD+"="+b.GetValue()+"\n";		
+				b.phase = 4;
+				update(b);
+		end	
+		rule "Booking - payment phase 3 - short term(type D)"
+		salience 1
+			when
+				b : Booking(phase==3, cartype==CarType.D)
+			then
+				b.text+="=================Podsumowanie rezerwacji==================\n";
+				long ShortTermPriceD = 89;/*change this to modify short term car D prices*/
+				b.SetValue(b.getlength()*ShortTermPriceD);	
+				b.text+="Koszt wynajmu na "+b.getlength()+" dni to "+b.getlength()+"*"+ShortTermPriceD+"="+b.GetValue()+"\n";	
+				b.phase = 4;
+				update(b);
+		end
+		rule "Phase 4 - Checking privilege - unjustified"
+			when 
+				b : Booking(phase==4, FreeItemChoice!=AdditionalItem.none, client.loyalty_program==false)
+			then
+				b.FreeItemChoice=AdditionalItem.none;
+				b.phase=5;
+				b.text+="Klient wybrał darmowe wyposażenie, ale nie należy do programu lojalnościowego. Usunięto wybór darmowego przedmiotu.\n";
+				
+				update(b);
+		end
+		rule "Phase 4 - Checking privilege - justified"
+			when 
+				b : Booking(phase==4, client.loyalty_program==true)
+			then
+				b.phase=5;
+				update(b);
+		end
+		rule "Phase 4 - Checking privilege - not used"
+			when 
+				b : Booking(phase==4, FreeItemChoice==AdditionalItem.none)
+			then
+				b.phase=5;
+				update(b);
+		end
+			rule "Booking - payment phase 5 - applying baby seat price(type A)"
+				when
+					b : Booking(phase==5,baby_seat,FreeItemChoice!=AdditionalItem.baby_seat, cartype==CarType.A)
+				then
+					b.baby_seat = false;
+					long baby_seat_cost=10;/*change this to modify baby seat cost for car A prices*/	
+					b.AddValue(baby_seat_cost);
+					b.text+="Opłata za wypożyczenie fotelika - "+baby_seat_cost+"\n";
+					update(b);
+			end	
+			rule "Booking - payment phase 5 - applying rack price(type A)"
+				when
+					b : Booking(phase==5,rack,FreeItemChoice!=AdditionalItem.rack, cartype==CarType.A)
+				then
+					b.rack = false;
+					long rack_cost=10;/*change this to modify rack cost for car A prices*/	
+					b.AddValue(rack_cost);
+					b.text+="Opłata za wypożyczenie bagażnika - "+rack_cost+"\n";
+					update(b);
+			end	
+			
+			rule "Booking - payment phase 5 - applying baby seat price(type B)"
+				when
+					b : Booking(phase==5,baby_seat,FreeItemChoice!=AdditionalItem.baby_seat, cartype==CarType.B)
+				then
+					b.baby_seat = false;
+					long baby_seat_cost=10;/*change this to modify baby seat cost for car A prices*/	
+					b.AddValue(baby_seat_cost);
+					b.text+="Opłata za wypożyczenie fotelika - "+baby_seat_cost+"\n";
+					update(b);
+			end	
+			rule "Booking - payment phase 5 - applying rack price(type B)"
+				when
+					b : Booking(phase==5,rack,FreeItemChoice!=AdditionalItem.rack, cartype==CarType.B)
+				then
+					b.rack = false;
+					long rack_cost=10;/*change this to modify rack cost for car A prices*/	
+					b.AddValue(rack_cost);
+					b.text+="Opłata za wypożyczenie bagażnika - "+rack_cost+"\n";
+					update(b);
+			end		
+
+			rule "Booking - payment phase 5 - applying baby seat price(type D)"
+				when
+					b : Booking(phase==5,baby_seat,FreeItemChoice!=AdditionalItem.baby_seat, cartype==CarType.D)
+				then
+					b.baby_seat = false;
+					long baby_seat_cost=10;/*change this to modify baby seat cost for car A prices*/	
+					b.AddValue(baby_seat_cost);
+					b.text+="Opłata za wypożyczenie fotelika - "+baby_seat_cost+"\n";
+					update(b);
+			end	
+			rule "Booking - payment phase 5 - applying rack price(type D)"
+				when
+					b : Booking(phase==5,rack,FreeItemChoice!=AdditionalItem.rack, cartype==CarType.D)
+				then
+					b.rack = false; 
+					long rack_cost=10;/*change this to modify rack cost for car A prices*/	
+					b.AddValue(rack_cost);
+					b.text+="Opłata za wypożyczenie bagażnika - "+rack_cost+"\n";
+					update(b);
+			end	
+		rule "Booking - payment phase 5 - applying free rack bonus"
+				when
+					b : Booking(phase==5,rack,FreeItemChoice==AdditionalItem.rack)
+				then
+					b.rack = false; 
+					b.text+="Bagażnik dodany za darmo w ramach programu lojalnościowego.\n";
+					update(b);
+			end			
+			rule "Booking - payment phase 5 - applying free baby seat bonus"
+				when
+					b : Booking(phase==5,baby_seat,FreeItemChoice==AdditionalItem.baby_seat)
+				then
+					b.baby_seat = false; 
+					b.text+="Fotelik dodany za darmo w ramach programu lojalnościowego.\n";
+					update(b);
+			end	
+		
+		rule "Booking - payment phase 5 - ending additional items calculation"
+			when
+				b : Booking(phase==5, baby_seat==false,rack==false)
+			then
+				b.phase = 6;
+				update(b);
+		end		
+		rule "Booking - payment phase 6 - summary"
+			when
+				b : Booking(phase==6)
+			then
+				b.phase = -1;
+				String pattern = "dd-MM-yyyy";
+				SimpleDateFormat df = new SimpleDateFormat(pattern);
+				System.out.println("=======================Nagłówek===========================");
+				System.out.println("Dodano rezerwację dla klienta " + b.client.name+" na samochód "+b.CarID);
+				System.out.println("Rezerwacja od dnia "+df.format(b.Start)+" do dnia "+df.format(b.End)); 
+				System.out.print(b.text);
+				System.out.println("Opłata ryczałtowa wynosi "+b.GetValue());
+				System.out.println("==========================================================");
+				update(b);
+		end	
+
+		
